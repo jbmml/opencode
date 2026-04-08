@@ -11,7 +11,7 @@ import { Session } from "../../session"
 import { Config } from "../../config/config"
 import { ConsoleState } from "../../config/console-state"
 import { Account, AccountID, OrgID } from "../../account"
-import { zodToJsonSchema } from "zod-to-json-schema"
+// zodToJsonSchema removed — incompatible with Zod v4. Use z.toJSONSchema() instead.
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 import { WorkspaceRoutes } from "./workspace"
@@ -191,8 +191,8 @@ export const ExperimentalRoutes = lazy(() =>
           tools.map((t) => ({
             id: t.id,
             description: t.description,
-            // Handle both Zod schemas and plain JSON schemas
-            parameters: (t.parameters as any)?._def ? zodToJsonSchema(t.parameters as any) : t.parameters,
+            // Handle both Zod schemas and plain JSON schemas (Zod v4 native)
+            parameters: (t.parameters as any)?._def ? z.toJSONSchema(t.parameters as z.ZodType) : t.parameters,
           })),
         )
       },

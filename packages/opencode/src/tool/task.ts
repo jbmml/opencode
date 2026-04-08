@@ -25,7 +25,18 @@ export const TaskTool = Tool.define("task", async () => {
     parameters: z.object({
       description: z.string().describe("A short (3-5 words) description of the task"),
       prompt: z.string().describe("The task for the agent to perform"),
-      subagent_type: z.string().describe("The type of specialized agent to use for this task"),
+      subagent_type: z
+        .string()
+        .describe("The type of specialized agent to use for this task")
+        .optional(),
+      agent: z
+        .string()
+        .describe("Alias for subagent_type — the agent to use for this task")
+        .optional(),
+      agent_type: z
+        .string()
+        .describe("Alias for subagent_type — the agent to use for this task")
+        .optional(),
       task_id: z
         .string()
         .describe(
@@ -35,23 +46,27 @@ export const TaskTool = Tool.define("task", async () => {
       command: z.string().describe("The command that triggered this task").optional(),
     }),
     async execute(params, ctx) {
+      // Resolve agent type from params, accepting aliases
+      const agentType = params.subagent_type || params.agent || params.agent_type
+      if (!agentType) throw new Error("One of subagent_type, agent, or agent_type is required")
+
       const config = await Config.get()
 
       // Skip permission check when user explicitly invoked via @ or command subtask
       if (!ctx.extra?.bypassAgentCheck) {
         await ctx.ask({
           permission: "task",
-          patterns: [params.subagent_type],
+          patterns: [agentType],
           always: ["*"],
           metadata: {
             description: params.description,
-            subagent_type: params.subagent_type,
+            subagent_type: agentType,
           },
         })
       }
 
-      const agent = await Agent.get(params.subagent_type)
-      if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
+      const agent = await Agent.get(agentType)
+      if (!agent) throw new Error(`Unknown agent type: ${agentType} is not a valid agent type`)
 
       const hasTaskPermission = agent.permission.some((rule) => rule.permission === "task")
       const hasTodoWritePermission = agent.permission.some((rule) => rule.permission === "todowrite")
